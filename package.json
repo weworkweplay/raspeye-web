@@ -1,0 +1,21 @@
+{
+  "name": "raspeye",
+  "version": "0.0.1",
+  "description": "REST-server and example application for RaspEye",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weworkweplay/raspeye-web"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "*",
+    "request": "*",
+    "multiparty": "*",
+    "socket.io": "*",
+    "fluent-ffmpeg": "*",
+    "easyimage": "*",
+    "forever": "^0.10.11"
+  }
+}
