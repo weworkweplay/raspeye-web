@@ -4,7 +4,11 @@ var express = require('express'),
     multiparty = require('multiparty'),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server),
-    easyimg = require('easyimage');
+    easyimg = require('easyimage'),
+    auth = {
+      username: 'demo',
+      password: 'demo'
+    };
 
 app.use(express.compress());
 
@@ -115,7 +119,7 @@ app.get('/thumbnails/*.jpg', function (req, res) {
 });
 
 // Receive post uploads
-app.post('/upload/', function (req, res) {
+app.post('/upload/', express.basicAuth(auth.username, auth.password), function (req, res) {
     var fileName = new Date().getTime() + '.jpg',
         fileStream = fs.createWriteStream(__dirname + '/images/' + fileName);
 
