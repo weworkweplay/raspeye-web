@@ -1,26 +1,28 @@
 var fs = require('fs'),
     child = require('child_process'),
     spawn,
-    runQueue;
+    generateNextTimelapse;
 
-runQueue = function () {
+generateNextTimelapse = function () {
   fs.readdir('./queue/', function (err, files) {
-    if (!err) {
-      files.forEach(function (file) {
-        var src = __dirname + '/queue/' + file,
-            dest = __dirname + '/timelapses/' + file.slice(0, -4) + '.mp4';
+    if (!err && files.length > 0) {
+      var file = files[0],
+          timelapseName = file.slice(0, -4) + '.mp4',
+          src = __dirname + '/queue/' + file,
+          tmp = __dirname + '/timelapses/tmp/' + timelapseName,
+          dest = __dirname + '/timelapses/' + timelapseName;
 
-        spawn = child.exec(
-          'ffmpeg -r 30 -f concat -i ' + src + ' -c:v libx264 -r 30 -pix_fmt yuv420p ' + dest,
-          function (err, stdin, stdout) {
-            if (!err) fs.unlink(src);
-          }
-        );
+      child.exec('ffmpeg -r 30 -f concat -i ' + src + ' -c:v libx264 -r 30 -pix_fmt yuv420p ' + tmp + '; echo 0;', function (err, stdin, stdout) {
+        if (!err) {
+          fs.unlink(src);
+          fs.renameSync(tmp, dest);
+          generateNextTimelapse();
+        }
       });
+    } else {
+      setTimeout(generateNextTimelapse, 1000);
     }
-
-    setTimeout(runQueue, 60000);
   });
 };
 
-runQueue();
+generateNextTimelapse();
