@@ -87,19 +87,17 @@
       ul.setAttribute('data-day', timelineData.days[i]);
       ul.className = 'timeline';
       ul.setAttribute('id', 'timeline-' + timelineData.days[i]);
-      ul.setAttribute('data-is-closed', 'data-is-closed');
+      if (i > 0) {
+        ul.setAttribute('data-is-closed', 'data-is-closed');
+      }
       h2.appendChild(a);
       fragment.appendChild(h2);
       fragment.appendChild(ul);
-
-      // Render and open today by default
-      if (i === 0) {
-        ul.removeAttribute('data-is-closed');
-        renderTimeline(timelineData.days[i]);
-      }
     }
 
     el.appendChild(fragment);
+
+    renderTimeline(timelineData.days[0]);
   };
 
   // Load timeline info from JSON
@@ -238,17 +236,24 @@
   checkQueue = function (start, end) {
     var r = new XMLHttpRequest();
     r.open('HEAD', '/timelapse/' + start + '-' + end + '.mp4', false);
-    r.send();
-    if (r.status === 404) {
-      setTimeout(function () {
-        checkQueue(start, end);
-      }, 5000);
-    } else if (r.status === 200) {
-      document.getElementsByClassName('intro')[0].style.display = 'none';
-      document.getElementsByClassName('loading')[0].style.display = 'none';
-      document.getElementsByClassName('done')[0].style.display = 'block';
-      document.getElementById('btn-download').href = '/timelapse/' + start + '-' + end + '.mp4';
+    r.onreadystatechange = function () {
+      if (r.readyState === 4) {
+        if (r.status === 404) {
+          setTimeout(function () {
+            checkQueue(start, end);
+          }, 5000);
+        } else if (r.status === 200) {
+          document.getElementsByClassName('intro')[0].style.display = 'none';
+          document.getElementsByClassName('loading')[0].style.display = 'none';
+          document.getElementsByClassName('done')[0].style.display = 'block';
+          document.getElementById('btn-download').href = '/timelapse/' + start + '-' + end + '.mp4';
+        }
+      }
+      if (console.clear) {
+        console.clear();
+      }
     }
+    r.send();
   };
 
   if (document.getElementById('timeline')) {
@@ -274,7 +279,7 @@
   // Socket.io real-time communication
   // works on two events
   // image:initial sends the relative path to the latest image known to the server
-  // image:new sends updates with the new filename
+  // image:live sends live update
   if (document.getElementById('live')) {
     var socket = io.connect('http://url.to.api/'),
         el = document.getElementById('live');
@@ -283,8 +288,9 @@
       el.src = data.url;
     });
 
-    socket.on('image:new', function (data) {
-      el.src = 'images/' + data.url;
+    socket.on('image:live', function (data) {
+      el.src = '';
+      el.src = './live.jpg';
     });
   }
 

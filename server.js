@@ -5,6 +5,8 @@ var express = require('express'),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server),
     easyimg = require('easyimage'),
+    lastSave = new Date().getTime(),
+    timeBetweenSaves = 180000,
     auth = {
       username: 'demo',
       password: 'demo'
@@ -113,6 +115,15 @@ app.get('/images/*.jpg', function (req, res) {
     res.sendfile(__dirname + req.path);
 });
 
+// Send static live image
+app.get('/live.jpg', function (req, res) {
+    fs.readdir(__dirname + '/live/', function (err, files) {
+        if (!err) {
+            res.sendfile(__dirname + '/live/' + files[files.length - 1]);
+        }
+    });
+});
+
 // Send thumbnails
 app.get('/thumbnails/*.jpg', function (req, res) {
     res.sendfile(__dirname + req.path);
@@ -120,24 +131,37 @@ app.get('/thumbnails/*.jpg', function (req, res) {
 
 // Receive post uploads
 app.post('/upload/', express.basicAuth(auth.username, auth.password), function (req, res) {
-    var fileName = new Date().getTime() + '.jpg',
-        fileStream = fs.createWriteStream(__dirname + '/images/' + fileName);
+    var now = new Date().getTime(),
+        liveStream = fs.createWriteStream(__dirname + '/live/' + now + '.jpg');
 
     // request pipes the file from the Raspberry Pi, just blindly write it to the file system (could be dangerous!)
-    req.pipe(fileStream);
+    req.pipe(liveStream);
 
     req.on('end', function () {
-        latestImage = fileName;
+        io.sockets.emit('image:live');
 
-        easyimg.resize({
-            src: 'images/' + fileName,
-            dst: 'thumbnails/'  + fileName,
-            width: 600,
-            height: 338,
-            quality: 50
-        }, function (err, image) {});
+        if (now - lastSave >= timeBetweenSaves) {
+            fs.renameSync(__dirname + '/live/' + now + '.jpg', __dirname + '/images/' + now + '.jpg');
 
-        io.sockets.emit('image:new', {url: fileName});
+            // Flush the live directory
+            fs.readdir(__dirname + '/live/', function (err, files) {
+                // Don't delete the current file or the livestream will be black
+                for (var i = 0; i < files.length - 1; i++) {
+                    fs.unlink(__dirname + '/live/' + files[i]);
+                }
+            });
+
+            easyimg.resize({
+                src: __dirname + '/images/' + now + '.jpg',
+                dst: __dirname + '/thumbnails/'  + now + '.jpg',
+                width: 600,
+                height: 338,
+                quality: 50
+            }, function (err, image) {});
+
+            lastSave = now;
+        }
+
         res.send(200);
     });
 });
