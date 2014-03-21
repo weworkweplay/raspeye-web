@@ -292,6 +292,10 @@
       el.src = '';
       el.src = './live.jpg';
     });
+
+    socket.on('connections:count', function (data) {
+      document.getElementById('live-connections').innerHTML = data.count;
+    });
   }
 
 })();

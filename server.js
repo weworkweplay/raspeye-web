@@ -6,6 +6,7 @@ var express = require('express'),
     io = require('socket.io').listen(server),
     easyimg = require('easyimage'),
     lastSave = 0,
+    connectionCount,
     checkStatusOnUpload = false,
     settings;
 
@@ -203,13 +204,6 @@ app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.http
     });
 });
 
-// On initial socket connection, send the latest known image
-io.sockets.on('connection', function (socket) {
-    fs.readdir('./images/', function (err, files) {
-        socket.emit('image:initial', {url: '/images/' + files[files.length - 1]});
-    });
-});
-
 // Parse timelapse generation request
 app.get('/generate/:start/:end/', function (req, res) {
     var start = parseInt(req.params.start, 10),
@@ -257,5 +251,19 @@ app.get('/timelapse/:start-:end.mp4', function (req, res) {
         }
 
         res.send(404);
+    });
+});
+
+io.sockets.on('connection', function (socket) {
+    connectionCount++;
+    io.sockets.emit('connections:count', {count: connectionCount});
+
+    fs.readdir('./images/', function (err, files) {
+        socket.emit('image:initial', {url: '/images/' + files[files.length - 1]});
+    });
+
+    socket.on('disconnect', function () {
+        connectionCount--;
+        io.sockets.emit('connections:count', {count: connectionCount});
     });
 });
