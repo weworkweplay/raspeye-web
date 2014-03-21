@@ -5,12 +5,16 @@ var express = require('express'),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server),
     easyimg = require('easyimage'),
-    lastSave = new Date().getTime(),
-    timeBetweenSaves = 180000,
-    auth = {
+    lastSave = 0,
+    settings;
+
+settings = {
+    httpAuth: {
       username: 'demo',
       password: 'demo'
-    };
+    },
+    timeBetweenSaves: 180000
+};
 
 app.use(express.compress());
 
@@ -130,7 +134,7 @@ app.get('/thumbnails/*.jpg', function (req, res) {
 });
 
 // Receive post uploads
-app.post('/upload/', express.basicAuth(auth.username, auth.password), function (req, res) {
+app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.httpAuth.password), function (req, res) {
     var now = new Date().getTime(),
         liveStream = fs.createWriteStream(__dirname + '/live/' + now + '.jpg');
 
@@ -140,7 +144,7 @@ app.post('/upload/', express.basicAuth(auth.username, auth.password), function (
     req.on('end', function () {
         io.sockets.emit('image:live');
 
-        if (now - lastSave >= timeBetweenSaves) {
+        if (now - lastSave >= settings.timeBetweenSaves) {
             fs.renameSync(__dirname + '/live/' + now + '.jpg', __dirname + '/images/' + now + '.jpg');
 
             // Flush the live directory
