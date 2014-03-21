@@ -6,14 +6,18 @@ var express = require('express'),
     io = require('socket.io').listen(server),
     easyimg = require('easyimage'),
     lastSave = 0,
+    checkStatusOnUpload = false,
     settings;
 
 settings = {
+    checkForPanic: true,
     httpAuth: {
       username: 'demo',
       password: 'demo'
     },
-    timeBetweenSaves: 180000
+    timeBetweenSaves: 180000,
+    timeBeforePanic: 1200000,
+    timeBetweenChecks: 300000
 };
 
 app.use(express.compress());
@@ -24,6 +28,30 @@ app.use(express.json());
 app.use(express.static('./public'));
 
 server.listen(1337);
+
+// Methods
+function checkStatus () {
+    fs.readdir('./images/', function (err, files) {
+        if (!err) {
+            var latest = files[files.length - 1],
+                now = new Date().getTime();
+
+            if (now - parseInt(latest.slice(0, -4), 10) > settings.timeBeforePanic) {
+                checkStatusOnUpload = true;
+                panic();
+            } else {
+                setTimeout(checkStatus, settings.timeBetweenChecks);
+            }
+        }
+    });
+}
+
+function panic () {
+    console.log('Panic! This will get executed when the RaspEye is down.');
+}
+
+setTimeout(checkStatus, settings.timeBetweenChecks);
+
 
 // Routes
 
@@ -164,6 +192,11 @@ app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.http
             }, function (err, image) {});
 
             lastSave = now;
+
+            if (checkStatusOnUpload) {
+                setTimeout(checkStatus, 60000);
+                checkStatusOnUpload = false;
+            }
         }
 
         res.send(200);
