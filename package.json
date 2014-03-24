@@ -10,12 +10,14 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "*",
-    "request": "*",
-    "multiparty": "*",
-    "socket.io": "*",
-    "fluent-ffmpeg": "*",
-    "easyimage": "*",
-    "forever": "^0.10.11"
-  }
+    "express": "3.4.x",
+    "request": "2.34.x",
+    "multiparty": "3.2.x",
+    "socket.io": "0.9.x",
+    "fluent-ffmpeg": "1.6.x",
+    "easyimage": "0.1.x",
+    "forever": "^0.10.11",
+    "gm": "1.14.x"
+  },
+  "engine": "node >= 0.8.x"
 }
