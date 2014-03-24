@@ -1,5 +1,6 @@
 var express = require('express'),
     app = express(),
+    gm = require('gm'),
     fs = require('fs'),
     multiparty = require('multiparty'),
     server = require('http').createServer(app),
@@ -16,6 +17,7 @@ settings = {
       username: 'demo',
       password: 'demo'
     },
+    moveNightImages: true,
     timeBetweenSaves: 180000,
     timeBeforePanic: 1200000,
     timeBetweenChecks: 300000
@@ -174,33 +176,36 @@ app.post('/upload/', express.basicAuth(settings.httpAuth.username, settings.http
         io.sockets.emit('image:live');
 
         if (now - lastSave >= settings.timeBetweenSaves) {
-            fs.renameSync(__dirname + '/live/' + now + '.jpg', __dirname + '/images/' + now + '.jpg');
+            gm(__dirname + '/live/' + now + '.jpg').color(function (err, color) {
+                if (!err) {
+                    var targetFolder = (Settings.moveNightImages && color < 10000 && color > 0) ? '/night' : '';
+                }
 
-            // Flush the live directory
-            fs.readdir(__dirname + '/live/', function (err, files) {
-                // Don't delete the current file or the livestream will be black
-                for (var i = 0; i < files.length - 1; i++) {
-                    fs.unlink(__dirname + '/live/' + files[i]);
+                fs.renameSync(__dirname + '/live/' + now + '.jpg', __dirname + targetFolder + '/images/' + now + '.jpg');
+
+                fs.readdir(__dirname + '/live/', function (err, files) {
+                    // Don't delete the current file or the livestream will be black
+                    for (var i = 0; i < files.length - 1; i++) {
+                        fs.unlink(__dirname + '/live/' + files[i]);
+                    }
+                });
+
+                easyimg.resize({
+                    src: __dirname + targetFolder + '/images/' + now + '.jpg',
+                    dst: __dirname + targetFolder + '/thumbnails/'  + now + '.jpg',
+                    width: 600,
+                    height: 338,
+                    quality: 50
+                }, function (err, image) {});
+
+                lastSave = now;
+
+                if (checkStatusOnUpload) {
+                    setTimeout(checkStatus, 60000);
+                    checkStatusOnUpload = false;
                 }
             });
-
-            easyimg.resize({
-                src: __dirname + '/images/' + now + '.jpg',
-                dst: __dirname + '/thumbnails/'  + now + '.jpg',
-                width: 600,
-                height: 338,
-                quality: 50
-            }, function (err, image) {});
-
-            lastSave = now;
-
-            if (checkStatusOnUpload) {
-                setTimeout(checkStatus, 60000);
-                checkStatusOnUpload = false;
-            }
         }
-
-        res.send(200);
     });
 });
 
