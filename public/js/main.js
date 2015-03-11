@@ -290,7 +290,7 @@
 
     socket.on('image:live', function (data) {
       el.src = '';
-      el.src = './live.jpg';
+      el.src = './live.jpg?t='+new Date().getTime();
     });
 
     socket.on('connections:count', function (data) {
